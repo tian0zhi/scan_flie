@@ -8,6 +8,32 @@ import threading
 import os
 import re
 
+def get_file_path(root_path,file_list,dir_list):
+    #获取该目录下所有的文件名称和目录名称
+    dir_or_files = os.listdir(root_path)
+    for dir_file in dir_or_files:
+        #获取目录或者文件的路径
+        dir_file_path = os.path.join(root_path+'/',dir_file)
+        #判断该路径为文件还是路径
+        if os.path.isdir(dir_file_path):
+            dir_list.append(dir_file_path)
+            #递归获取所有文件和目录的路径
+            get_file_path(dir_file_path,file_list,dir_list)
+        else:
+            file_list.append(dir_file_path)
+
+def get_file_path_nore(root_path,file_list,dir_list):
+    #获取该目录下所有的文件名称和目录名称
+    dir_or_files = os.listdir(root_path)
+    for dir_file in dir_or_files:
+        #获取目录或者文件的路径
+        dir_file_path = os.path.join(root_path+'/',dir_file)
+        #判断该路径为文件还是路径
+        if os.path.isdir(dir_file_path):
+            dir_list.append(dir_file_path)
+        else:
+            file_list.append(dir_file_path)
+
 class MyWindow(QMainWindow, Ui_MainWindow):
     senmsg = pyqtSignal(str)
     senmsg_for_files_show = pyqtSignal(str)
@@ -79,7 +105,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         count = 0
         with open(file_path,'w') as f:
             for line in self.filter_files:
-                f.write(os.path.join(self.folder_path+'/',line)+'\n')
+                f.write(line+'\n')
                 count = count + 1
                 self.sendint_for_pb.emit(int(count/file_num)*100)
         if count == 0:
@@ -101,7 +127,9 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         print("over")
 
     def filter_thread(self):
-        file_names = os.listdir(self.folder_path)
+        # file_names = os.listdir(self.folder_path)
+        file_names = []
+        folder_names = []
         self.filter_files = []
         self.senmsg.emit("#######################")
         self.senmsg.emit("后缀名(&)： "+self.rear_name_lineEdit.text())
@@ -109,9 +137,18 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         self.senmsg.emit("正则表达式：" + self.zhengze_lineEdit.text())
         self.senmsg.emit("#######################")
         self.senmsg.emit("符合条件的文件获取中....")
+        if self.checkBox.checkState():
+            self.senmsg.emit("递归遍历")
+            get_file_path(self.folder_path,file_names,folder_names)
+        else:
+            self.senmsg.emit("非递归遍历")
+            get_file_path_nore(self.folder_path,file_names,folder_names)
+            #file_names = os.listdir(self.folder_path)
         for elem in file_names:
-            if os.path.isdir(os.path.join(self.folder_path+'/',elem)):
-                continue
+            # if os.path.isdir(os.path.join(self.folder_path+'/',elem)):
+            #     continue
+            full_elem = elem
+            elem = elem.split('/')[-1]
             if len(self.rear_name_lineEdit.text()) > 0:
                 rear_list = self.rear_name_lineEdit.text().split('&')
                 if not elem.endswith(tuple(rear_list)):
@@ -124,7 +161,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
                     pass
                 else:
                     continue
-            self.filter_files.append(elem)
+            self.filter_files.append(full_elem)
             self.senmsg_for_files_show.emit(elem)
         self.senmsg.emit("符合条件的文件列表获取完毕!\n")
 
