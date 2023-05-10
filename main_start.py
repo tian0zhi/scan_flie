@@ -8,7 +8,12 @@ import threading
 import os
 import re
 
-def get_file_path(root_path,file_list,dir_list):
+# get_file_path 根据给定的文件夹路径，获取该路径下的所有文件
+# root_path ： 给定的文件路径
+# file_list ： 获取的文件名列表
+# dir_list  ： 获取的文件夹名列表
+# flag_re   ： 是否递归遍历子文件夹的标志
+def get_file_path(root_path,file_list,dir_list,flag_re = False):
     #获取该目录下所有的文件名称和目录名称
     dir_or_files = os.listdir(root_path)
     for dir_file in dir_or_files:
@@ -17,22 +22,12 @@ def get_file_path(root_path,file_list,dir_list):
         #判断该路径为文件还是路径
         if os.path.isdir(dir_file_path):
             dir_list.append(dir_file_path)
-            #递归获取所有文件和目录的路径
-            get_file_path(dir_file_path,file_list,dir_list)
+            if flag_re:
+                #递归获取所有文件和目录的路径
+                get_file_path(dir_file_path,file_list,dir_list)
         else:
             file_list.append(dir_file_path)
 
-def get_file_path_nore(root_path,file_list,dir_list):
-    #获取该目录下所有的文件名称和目录名称
-    dir_or_files = os.listdir(root_path)
-    for dir_file in dir_or_files:
-        #获取目录或者文件的路径
-        dir_file_path = os.path.join(root_path+'/',dir_file)
-        #判断该路径为文件还是路径
-        if os.path.isdir(dir_file_path):
-            dir_list.append(dir_file_path)
-        else:
-            file_list.append(dir_file_path)
 
 class MyWindow(QMainWindow, Ui_MainWindow):
     senmsg = pyqtSignal(str)
@@ -41,7 +36,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
     def __init__(self, parent=None):
         super(MyWindow, self).__init__(parent)
         self.setupUi(self)
-        self.setWindowTitle('文件过滤生成器')
+        self.setWindowTitle('文件条件筛选生成器')
         self.setWindowIcon(QIcon("fa.png"))
         self.folder_path = ''
         self.all_files = []
@@ -105,6 +100,8 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         count = 0
         with open(file_path,'w') as f:
             for line in self.filter_files:
+                if self.checkBox_2.checkState():
+                    line = line.split('/')[-1]
                 f.write(line+'\n')
                 count = count + 1
                 self.sendint_for_pb.emit(int(count/file_num)*100)
@@ -139,10 +136,9 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         self.senmsg.emit("符合条件的文件获取中....")
         if self.checkBox.checkState():
             self.senmsg.emit("递归遍历")
-            get_file_path(self.folder_path,file_names,folder_names)
         else:
             self.senmsg.emit("非递归遍历")
-            get_file_path_nore(self.folder_path,file_names,folder_names)
+        get_file_path(self.folder_path,file_names,folder_names,self.checkBox.checkState())
             #file_names = os.listdir(self.folder_path)
         for elem in file_names:
             # if os.path.isdir(os.path.join(self.folder_path+'/',elem)):
@@ -161,6 +157,9 @@ class MyWindow(QMainWindow, Ui_MainWindow):
                     pass
                 else:
                     continue
+            # if self.checkBox_2.checkState():
+            #     self.filter_files.append(elem)
+            # else:
             self.filter_files.append(full_elem)
             self.senmsg_for_files_show.emit(elem)
         self.senmsg.emit("符合条件的文件列表获取完毕!\n")
